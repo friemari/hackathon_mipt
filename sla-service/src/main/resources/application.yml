@@ -4,3 +4,7 @@ server:
 spring:
   application:
     name: sla-service
+
+springdoc:
+  swagger-ui:
+    path: /docs
