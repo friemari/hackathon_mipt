@@ -9,7 +9,7 @@ python3 -m venv venv
 source venv/bin/activate
 
 # Установить зависимости
-pip install fastapi uvicorn pandas numpy scikit-learn joblib python-multipart
+pip install fastapi uvicorn pandas numpy scikit-learn joblib python-multipart catboost
 
 
 # Запустить сервер
