@@ -4,11 +4,21 @@ server:
 spring:
   application:
     name: sla-service
+
   datasource:
-    url: jdbc:postgresql://localhost:5432/sla_database
-    username: postgres
-    password: admin
+    url: jdbc:postgresql://db:5432/sla
+    username: sla_user
+    password: sla_pass
     driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+
+  sql:
+    init:
+      mode: never
+
   servlet:
     multipart:
       max-file-size: 50MB

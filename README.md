@@ -40,6 +40,23 @@ mvnw.cmd spring-boot:run
 1. Открыть папку `sla-service` в IntelliJ IDEA
 2. Дождаться загрузки Maven-зависимостей
 3. Запустить класс SlaServiceApplication
+
+### 3) через Docker
+
+#### Этап 1. Сборка приложения
+```bash
+./mvnw clean package
+```
+
+Windows:
+```bash
+mvnw.cmd clean package
+```
+
+#### Этап 2. Запуск через Docker
+```bash
+docker compose up --build
+```
 ---
 
 ## API Эндпоинты
