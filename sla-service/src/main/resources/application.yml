@@ -4,7 +4,23 @@ server:
 spring:
   application:
     name: sla-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/sla_database
+    username: postgres
+    password: admin
+    driver-class-name: org.postgresql.Driver
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
 
 springdoc:
   swagger-ui:
     path: /docs
+
+sla:
+  b2c:
+    reaction-minutes: 30
+    to-assembly-hours: 4
+    assembly-to-delivery-days: 1
+    total-days: 2
