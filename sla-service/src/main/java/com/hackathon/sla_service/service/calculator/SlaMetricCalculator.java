@@ -1,5 +1,6 @@
 package com.hackathon.sla_service.service.calculator;
 
+import com.hackathon.sla_service.config.SlaConfigProperties;
 import com.hackathon.sla_service.dto.common.BreachDistributionDto;
 import com.hackathon.sla_service.dto.common.SummaryMetricDto;
 import org.springframework.stereotype.Component;
@@ -8,6 +9,12 @@ import java.util.List;
 
 @Component
 public class SlaMetricCalculator {
+
+    private final SlaConfigProperties slaConfig;
+
+    public SlaMetricCalculator(SlaConfigProperties slaConfig) {
+        this.slaConfig = slaConfig;
+    }
 
     public SummaryMetricDto calculate(List<Double> values, int thresholdMinutes) {
         SummaryMetricDto dto = new SummaryMetricDto();
@@ -26,6 +33,56 @@ public class SlaMetricCalculator {
         dto.setMedianMinutes(round(percentile(values, 0.50)));
         dto.setP90Minutes(round(percentile(values, 0.90)));
         dto.setBreachDistribution(buildDistribution(values, thresholdMinutes));
+
+        return dto;
+    }
+
+    public SummaryMetricDto calculateDays(List<Double> values, int thresholdDays) {
+        SummaryMetricDto dto = new SummaryMetricDto();
+
+        long total = values.size();
+        long metCount = values.stream().filter(v -> v <= thresholdDays).count();
+        long breachCount = total - metCount;
+
+        dto.setThresholdMinutes(thresholdDays);
+        dto.setTotalOrders(total);
+        dto.setMetCount(metCount);
+        dto.setMetPercent(percent(metCount, total));
+        dto.setBreachCount(breachCount);
+        dto.setBreachPercent(percent(breachCount, total));
+        dto.setAvgMinutes(round(avg(values)));
+        dto.setMedianMinutes(round(percentile(values, 0.50)));
+        dto.setP90Minutes(round(percentile(values, 0.90)));
+
+        // Build distribution for days
+        BreachDistributionDto distribution = new BreachDistributionDto();
+        List<Integer> buckets = slaConfig.getBreachBuckets().getDays();
+        int bucket1 = buckets.get(0);
+        int bucket2 = buckets.get(1);
+
+        long upToBucket1 = values.stream()
+                .filter(v -> v > thresholdDays)
+                .mapToDouble(v -> v - thresholdDays)
+                .filter(breach -> breach > 0 && breach <= bucket1)
+                .count();
+
+        long fromBucket1ToBucket2 = values.stream()
+                .filter(v -> v > thresholdDays)
+                .mapToDouble(v -> v - thresholdDays)
+                .filter(breach -> breach > bucket1 && breach <= bucket2)
+                .count();
+
+        long overBucket2 = values.stream()
+                .filter(v -> v > thresholdDays)
+                .mapToDouble(v -> v - thresholdDays)
+                .filter(breach -> breach > bucket2)
+                .count();
+
+        distribution.setUpTo15Min((int) upToBucket1);
+        distribution.setFrom15To60Min((int) fromBucket1ToBucket2);
+        distribution.setOver60Min((int) overBucket2);
+
+        dto.setBreachDistribution(distribution);
 
         return dto;
     }
