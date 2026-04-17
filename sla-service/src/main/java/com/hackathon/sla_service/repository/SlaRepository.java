@@ -115,4 +115,46 @@ public class SlaRepository {
                 params.toArray()
         );
     }
+
+    public List<String> getDistinctManagerIds(LocalDate dateFrom,
+                                              LocalDate dateTo,
+                                              String qualification) {
+        StringBuilder sql = new StringBuilder("""
+            SELECT DISTINCT b2c_manager_id
+            FROM leads
+            WHERE sale_date BETWEEN ? AND ?
+              AND lifecycle_incomplete = FALSE
+              AND b2c_manager_id IS NOT NULL
+              AND b2c_manager_id != ''
+        """);
+
+        List<Object> params = new ArrayList<>();
+        params.add(Date.valueOf(dateFrom));
+        params.add(Date.valueOf(dateTo));
+
+        if (qualification != null && !qualification.isBlank()) {
+            sql.append(" AND qualification = ?");
+            params.add(qualification);
+        } else {
+            sql.append(" AND qualification IN ('A', 'B', 'C')");
+        }
+
+        sql.append(" ORDER BY b2c_manager_id");
+
+        return jdbcTemplate.queryForList(sql.toString(), String.class, params.toArray());
+    }
+
+    public String getManagerName(String managerId) {
+        if (managerId == null || managerId.isBlank()) {
+            return "Unknown";
+        }
+
+        String sql = "SELECT name FROM lead_groups WHERE id = ?";
+        try {
+            String name = jdbcTemplate.queryForObject(sql, String.class, managerId);
+            return name != null ? name : managerId;
+        } catch (Exception e) {
+            return managerId;
+        }
+    }
 }

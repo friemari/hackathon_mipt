@@ -1,5 +1,7 @@
 package com.hackathon.sla_service.service.impl;
 
+import com.hackathon.sla_service.dto.response.ByManagerResponse;
+import com.hackathon.sla_service.dto.response.ManagerMetricsRowDto;
 import com.hackathon.sla_service.dto.common.SummaryMetricDto;
 import com.hackathon.sla_service.dto.common.SummaryPeriodDto;
 import com.hackathon.sla_service.dto.response.SlaSummaryResponse;
@@ -10,7 +12,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -73,6 +77,58 @@ public class SlaSummaryServiceImpl implements SlaSummaryService {
         response.setPeriod(new SummaryPeriodDto(dateFrom, dateTo));
         response.setPipeline("b2c");
         response.setMetrics(metrics);
+
+        return response;
+    }
+
+    @Override
+    public ByManagerResponse getB2cByManager(LocalDate dateFrom,
+                                             LocalDate dateTo,
+                                             String qualification) {
+
+        List<String> managerIds = slaRepository.getDistinctManagerIds(dateFrom, dateTo, qualification);
+
+        List<ManagerMetricsRowDto> items = new ArrayList<>();
+
+        for (String managerId : managerIds) {
+            ManagerMetricsRowDto row = new ManagerMetricsRowDto();
+            row.setManagerId(managerId);
+            row.setManagerName(slaRepository.getManagerName(managerId));
+
+            Map<String, SummaryMetricDto> metrics = new LinkedHashMap<>();
+
+            SummaryMetricDto sla1 = slaMetricCalculator.calculate(
+                    slaRepository.getSla1Values(dateFrom, dateTo, managerId, qualification),
+                    reactionMinutes
+            );
+            metrics.put("sla1_reaction", sla1);
+
+            SummaryMetricDto sla2 = slaMetricCalculator.calculate(
+                    slaRepository.getSla2Values(dateFrom, dateTo, managerId, qualification),
+                    toAssemblyHours * 60
+            );
+            metrics.put("sla2_to_assembly", sla2);
+
+            SummaryMetricDto sla3 = slaMetricCalculator.calculate(
+                    slaRepository.getSla3Values(dateFrom, dateTo, managerId, qualification),
+                    assemblyToDeliveryDays * 24 * 60
+            );
+            metrics.put("sla3_assembly_to_delivery", sla3);
+
+            SummaryMetricDto b2cTotal = slaMetricCalculator.calculate(
+                    slaRepository.getB2cTotalValues(dateFrom, dateTo, managerId, qualification),
+                    totalDays * 24 * 60
+            );
+            metrics.put("b2c_total", b2cTotal);
+
+            row.setMetrics(metrics);
+            items.add(row);
+        }
+
+        ByManagerResponse response = new ByManagerResponse();
+        response.setPeriod(new SummaryPeriodDto(dateFrom, dateTo));
+        response.setPipeline("b2c");
+        response.setItems(items);
 
         return response;
     }
