@@ -30,6 +30,7 @@ springdoc:
 
 sla:
   b2c:
+
     reaction-minutes: 30        # SLA-1: время реакции менеджера
     to-assembly-hours: 4        # SLA-2: от реакции до сборки
     assembly-to-delivery-days: 1 # SLA-3: сборка до передачи в доставку
