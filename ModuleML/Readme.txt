@@ -9,8 +9,7 @@ python3 -m venv venv
 source venv/bin/activate
 
 # Установить зависимости
-pip install fastapi uvicorn pandas numpy scikit-learn joblib python-multipart catboost
-
+pip install fastapi uvicorn pandas numpy scikit-learn joblib python-multipart catboost python-dateutil
 
 # Запустить сервер
 python order_processor.py
