@@ -2,10 +2,15 @@ package com.hackathon.sla_service.dto.common;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Map;
+
 public class SummaryMetricDto {
 
-    @JsonProperty("threshold_minutes")
-    private Integer thresholdMinutes;
+    @JsonProperty("threshold_value")
+    private Integer thresholdValue;
+
+    @JsonProperty("unit")
+    private String unit;
 
     @JsonProperty("total_orders")
     private Long totalOrders;
@@ -22,26 +27,34 @@ public class SummaryMetricDto {
     @JsonProperty("breach_percent")
     private Double breachPercent;
 
-    @JsonProperty("avg_minutes")
-    private Double avgMinutes;
+    @JsonProperty("avg_value")
+    private Double avgValue;
 
-    @JsonProperty("median_minutes")
-    private Double medianMinutes;
+    @JsonProperty("median_value")
+    private Double medianValue;
 
-    @JsonProperty("p90_minutes")
-    private Double p90Minutes;
+    @JsonProperty("p90_value")
+    private Double p90Value;
 
     @JsonProperty("breach_distribution")
-    private BreachDistributionDto breachDistribution;
+    private Map<String, Integer> breachDistribution;
 
     public SummaryMetricDto() {}
 
-    public Integer getThresholdMinutes() {
-        return thresholdMinutes;
+    public Integer getThresholdValue() {
+        return thresholdValue;
     }
 
-    public void setThresholdMinutes(Integer thresholdMinutes) {
-        this.thresholdMinutes = thresholdMinutes;
+    public void setThresholdValue(Integer thresholdValue) {
+        this.thresholdValue = thresholdValue;
+    }
+
+    public String getUnit() {
+        return unit;
+    }
+
+    public void setUnit(String unit) {
+        this.unit = unit;
     }
 
     public Long getTotalOrders() {
@@ -84,35 +97,35 @@ public class SummaryMetricDto {
         this.breachPercent = breachPercent;
     }
 
-    public Double getAvgMinutes() {
-        return avgMinutes;
+    public Double getAvgValue() {
+        return avgValue;
     }
 
-    public void setAvgMinutes(Double avgMinutes) {
-        this.avgMinutes = avgMinutes;
+    public void setAvgValue(Double avgValue) {
+        this.avgValue = avgValue;
     }
 
-    public Double getMedianMinutes() {
-        return medianMinutes;
+    public Double getMedianValue() {
+        return medianValue;
     }
 
-    public void setMedianMinutes(Double medianMinutes) {
-        this.medianMinutes = medianMinutes;
+    public void setMedianValue(Double medianValue) {
+        this.medianValue = medianValue;
     }
 
-    public Double getP90Minutes() {
-        return p90Minutes;
+    public Double getP90Value() {
+        return p90Value;
     }
 
-    public void setP90Minutes(Double p90Minutes) {
-        this.p90Minutes = p90Minutes;
+    public void setP90Value(Double p90Value) {
+        this.p90Value = p90Value;
     }
 
-    public BreachDistributionDto getBreachDistribution() {
+    public Map<String, Integer> getBreachDistribution() {
         return breachDistribution;
     }
 
-    public void setBreachDistribution(BreachDistributionDto breachDistribution) {
+    public void setBreachDistribution(Map<String, Integer> breachDistribution) {
         this.breachDistribution = breachDistribution;
     }
 }

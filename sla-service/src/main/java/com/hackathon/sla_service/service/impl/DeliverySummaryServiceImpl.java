@@ -89,7 +89,6 @@ public class DeliverySummaryServiceImpl implements DeliverySummaryService {
         for (String managerId : managerIds) {
             ManagerMetricsRowDto row = new ManagerMetricsRowDto();
             row.setManagerId(managerId);
-            row.setManagerName(managerId);
 
             Map<String, SummaryMetricDto> metrics = new LinkedHashMap<>();
 

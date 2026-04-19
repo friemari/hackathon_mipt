@@ -2,11 +2,15 @@ package com.hackathon.sla_service.repository;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+import com.hackathon.sla_service.repository.model.LeadTimelineRow;
 
 import java.sql.Date;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.sql.Timestamp;
+
 
 @Repository
 public class SlaRepository {
@@ -144,20 +148,6 @@ public class SlaRepository {
         return jdbcTemplate.queryForList(sql.toString(), String.class, params.toArray());
     }
 
-    public String getManagerName(String managerId) {
-        if (managerId == null || managerId.isBlank()) {
-            return "Unknown";
-        }
-
-        String sql = "SELECT name FROM lead_groups WHERE id = ?";
-        try {
-            String name = jdbcTemplate.queryForObject(sql, String.class, managerId);
-            return name != null ? name : managerId;
-        } catch (Exception e) {
-            return managerId;
-        }
-    }
-
     public List<Double> getSla4Values(LocalDate dateFrom,
                                       LocalDate dateTo,
                                       String managerId,
@@ -261,4 +251,77 @@ public class SlaRepository {
         return jdbcTemplate.queryForList(sql.toString(), String.class, params.toArray());
     }
 
+    public List<Double> getFullCycleValues(LocalDate dateFrom,
+                                           LocalDate dateTo) {
+        String sql = """
+            SELECT metric_value
+            FROM (
+                SELECT EXTRACT(EPOCH FROM (closed_ts - created_at)) / 60.0 / 24.0 AS metric_value
+                FROM leads
+                WHERE sale_date BETWEEN ? AND ?
+                  AND lifecycle_incomplete = FALSE
+                  AND outcome_unknown = FALSE
+                  AND created_at IS NOT NULL
+                  AND closed_ts IS NOT NULL
+            ) t
+            WHERE metric_value IS NOT NULL
+              AND metric_value >= 0
+            ORDER BY metric_value
+            """;
+
+        return jdbcTemplate.query(
+                sql,
+                (rs, rowNum) -> rs.getDouble("metric_value"),
+                Date.valueOf(dateFrom),
+                Date.valueOf(dateTo)
+        );
+    }
+
+    public LeadTimelineRow getLeadTimeline(String leadId) {
+        String sql = """
+        SELECT
+            id,
+            lifecycle_incomplete,
+            outcome_unknown,
+            created_at,
+            sale_ts,
+            to_assembly_ts,
+            handed_to_delivery_ts,
+            issued_or_pvz_ts,
+            received_ts,
+            rejected_ts,
+            returned_ts,
+            closed_ts
+        FROM leads
+        WHERE id = ?
+        """;
+
+        List<LeadTimelineRow> rows = jdbcTemplate.query(
+                sql,
+                (rs, rowNum) -> {
+                    LeadTimelineRow row = new LeadTimelineRow();
+                    row.setLeadId(rs.getString("id"));
+                    row.setLifecycleIncomplete(rs.getBoolean("lifecycle_incomplete"));
+                    row.setOutcomeUnknown(rs.getBoolean("outcome_unknown"));
+                    row.setCreatedAt(toLocalDateTime(rs.getTimestamp("created_at")));
+                    row.setSaleTs(toLocalDateTime(rs.getTimestamp("sale_ts")));
+                    row.setToAssemblyTs(toLocalDateTime(rs.getTimestamp("to_assembly_ts")));
+                    row.setHandedToDeliveryTs(toLocalDateTime(rs.getTimestamp("handed_to_delivery_ts")));
+                    row.setIssuedOrPvzTs(toLocalDateTime(rs.getTimestamp("issued_or_pvz_ts")));
+                    row.setReceivedTs(toLocalDateTime(rs.getTimestamp("received_ts")));
+                    row.setRejectedTs(toLocalDateTime(rs.getTimestamp("rejected_ts")));
+                    row.setReturnedTs(toLocalDateTime(rs.getTimestamp("returned_ts")));
+                    row.setClosedTs(toLocalDateTime(rs.getTimestamp("closed_ts")));
+                    return row;
+                },
+                leadId
+        );
+
+        return rows.isEmpty() ? null : rows.get(0);
+    }
+
+    private LocalDateTime toLocalDateTime(Timestamp timestamp) {
+        return timestamp == null ? null : timestamp.toLocalDateTime();
+    }
 }
+

@@ -10,9 +10,6 @@ public class ManagerMetricsRowDto {
     @JsonProperty("manager_id")
     private String managerId;
 
-    @JsonProperty("manager_name")
-    private String managerName;
-
     @JsonProperty("metrics")
     private Map<String, SummaryMetricDto> metrics;
 
@@ -25,14 +22,6 @@ public class ManagerMetricsRowDto {
 
     public void setManagerId(String managerId) {
         this.managerId = managerId;
-    }
-
-    public String getManagerName() {
-        return managerName;
-    }
-
-    public void setManagerName(String managerName) {
-        this.managerName = managerName;
     }
 
     public Map<String, SummaryMetricDto> getMetrics() {

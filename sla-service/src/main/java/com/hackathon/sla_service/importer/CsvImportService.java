@@ -4,6 +4,7 @@ import com.hackathon.sla_service.dto.DataLoadResponse;
 import com.hackathon.sla_service.importer.model.CsvLeadRow;
 import com.hackathon.sla_service.repository.ImportAnomalyRepository;
 import com.hackathon.sla_service.repository.ImportBatchRepository;
+import com.hackathon.sla_service.repository.ImportErrorRepository;
 import com.hackathon.sla_service.repository.LeadRepository;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
@@ -22,15 +23,19 @@ public class CsvImportService {
     private final LeadRepository leadRepository;
     private final ImportBatchRepository importBatchRepository;
     private final ImportAnomalyRepository importAnomalyRepository;
+    private final ImportErrorRepository importErrorRepository;
 
     public CsvImportService(CsvLeadRowMapper rowMapper,
                             LeadRepository leadRepository,
                             ImportBatchRepository importBatchRepository,
-                            ImportAnomalyRepository importAnomalyRepository) {
+                            ImportAnomalyRepository importAnomalyRepository,
+                            ImportErrorRepository importErrorRepository
+                            ) {
         this.rowMapper = rowMapper;
         this.leadRepository = leadRepository;
         this.importBatchRepository = importBatchRepository;
         this.importAnomalyRepository = importAnomalyRepository;
+        this.importErrorRepository = importErrorRepository;
     }
 
     public DataLoadResponse importFile(MultipartFile file) {
@@ -94,6 +99,16 @@ public class CsvImportService {
                 } catch (Exception e) {
                     errorRows++;
 
+                    String leadId = safeGet(record, "lead_id");
+                    String errorMessage = buildErrorMessage(e);
+
+                    importErrorRepository.saveError(
+                            batchId,
+                            totalRows,
+                            leadId,
+                            errorMessage
+                    );
+
                     System.err.println("Ошибка импорта строки #" + totalRows);
                     System.err.println("lead_id = " + record.get("lead_id"));
                     System.err.println("Причина: " + e.getMessage());
@@ -138,4 +153,20 @@ public class CsvImportService {
             throw new RuntimeException("Ошибка загрузки CSV: " + e.getMessage(), e);
         }
     }
+    private String safeGet(CSVRecord record, String fieldName) {
+        try {
+            String value = record.get(fieldName);
+            return value == null || value.isBlank() ? null : value;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private String buildErrorMessage(Exception e) {
+        if (e.getMessage() == null || e.getMessage().isBlank()) {
+            return e.getClass().getSimpleName();
+        }
+        return e.getClass().getSimpleName() + ": " + e.getMessage();
+    }
+
 }
