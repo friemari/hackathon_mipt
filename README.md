@@ -185,7 +185,7 @@ curl -X POST http://localhost:8080/api/data/load \
 | `batchId`      | long   | Идентификатор загрузки               |
 | `status`       | string | Статус обработки (`DONE` / `FAILED`) |
 
-#### 💡 Примечания
+#### Примечания
 
 - Принимается только CSV файл
 - Данные валидируются при загрузке
@@ -205,7 +205,7 @@ curl -X POST http://localhost:8080/api/data/load \
 |  3   | Доставка          | `handed_to_delivery_ts - to_assembly_ts` | 3 дня (4320 мин)    | `sla3_assembly_to_delivery` |
 |  4   | B2C Total         | `handed_to_delivery_ts - created_at`     | 7 дней (10080 мин)  | `b2c_total`                 |
 
-### 📈 Что считается?
+### Что считается?
 
 - **met** = заказ выполнен в пределах норматива
 - **breach** = нарушение SLA
