@@ -1,11 +1,12 @@
 package com.hackathon.sla_service.service.calculator;
 
 import com.hackathon.sla_service.config.SlaConfigProperties;
-import com.hackathon.sla_service.dto.common.BreachDistributionDto;
 import com.hackathon.sla_service.dto.common.SummaryMetricDto;
 import org.springframework.stereotype.Component;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Component
 public class SlaMetricCalculator {
@@ -23,16 +24,17 @@ public class SlaMetricCalculator {
         long metCount = values.stream().filter(v -> v <= thresholdMinutes).count();
         long breachCount = total - metCount;
 
-        dto.setThresholdMinutes(thresholdMinutes);
+        dto.setThresholdValue(thresholdMinutes);
+        dto.setUnit("minutes");
         dto.setTotalOrders(total);
         dto.setMetCount(metCount);
         dto.setMetPercent(percent(metCount, total));
         dto.setBreachCount(breachCount);
         dto.setBreachPercent(percent(breachCount, total));
-        dto.setAvgMinutes(round(avg(values)));
-        dto.setMedianMinutes(round(percentile(values, 0.50)));
-        dto.setP90Minutes(round(percentile(values, 0.90)));
-        dto.setBreachDistribution(buildDistribution(values, thresholdMinutes));
+        dto.setAvgValue(round(avg(values)));
+        dto.setMedianValue(round(percentile(values, 0.50)));
+        dto.setP90Value(round(percentile(values, 0.90)));
+        dto.setBreachDistribution(buildMinutesDistribution(values, thresholdMinutes));
 
         return dto;
     }
@@ -44,81 +46,95 @@ public class SlaMetricCalculator {
         long metCount = values.stream().filter(v -> v <= thresholdDays).count();
         long breachCount = total - metCount;
 
-        dto.setThresholdMinutes(thresholdDays);
+        dto.setThresholdValue(thresholdDays);
+        dto.setUnit("days");
         dto.setTotalOrders(total);
         dto.setMetCount(metCount);
         dto.setMetPercent(percent(metCount, total));
         dto.setBreachCount(breachCount);
         dto.setBreachPercent(percent(breachCount, total));
-        dto.setAvgMinutes(round(avg(values)));
-        dto.setMedianMinutes(round(percentile(values, 0.50)));
-        dto.setP90Minutes(round(percentile(values, 0.90)));
-
-        // Build distribution for days
-        BreachDistributionDto distribution = new BreachDistributionDto();
-        List<Integer> buckets = slaConfig.getBreachBuckets().getDays();
-        int bucket1 = buckets.get(0);
-        int bucket2 = buckets.get(1);
-
-        long upToBucket1 = values.stream()
-                .filter(v -> v > thresholdDays)
-                .mapToDouble(v -> v - thresholdDays)
-                .filter(breach -> breach > 0 && breach <= bucket1)
-                .count();
-
-        long fromBucket1ToBucket2 = values.stream()
-                .filter(v -> v > thresholdDays)
-                .mapToDouble(v -> v - thresholdDays)
-                .filter(breach -> breach > bucket1 && breach <= bucket2)
-                .count();
-
-        long overBucket2 = values.stream()
-                .filter(v -> v > thresholdDays)
-                .mapToDouble(v -> v - thresholdDays)
-                .filter(breach -> breach > bucket2)
-                .count();
-
-        distribution.setUpTo15Min((int) upToBucket1);
-        distribution.setFrom15To60Min((int) fromBucket1ToBucket2);
-        distribution.setOver60Min((int) overBucket2);
-
-        dto.setBreachDistribution(distribution);
+        dto.setAvgValue(round(avg(values)));
+        dto.setMedianValue(round(percentile(values, 0.50)));
+        dto.setP90Value(round(percentile(values, 0.90)));
+        dto.setBreachDistribution(buildDaysDistribution(values, thresholdDays));
 
         return dto;
     }
 
-    private BreachDistributionDto buildDistribution(List<Double> values, int thresholdMinutes) {
-        long upTo15 = values.stream()
-                .filter(v -> v > thresholdMinutes)
-                .mapToDouble(v -> v - thresholdMinutes)
-                .filter(breach -> breach > 0 && breach <= 15)
-                .count();
+    private Map<String, Integer> buildMinutesDistribution(List<Double> values, int thresholdMinutes) {
+        List<Integer> buckets = slaConfig.getBreachBuckets().getShortMinutes();
+        int b1 = buckets.get(0);
+        int b2 = buckets.get(1);
 
-        long from15To60 = values.stream()
-                .filter(v -> v > thresholdMinutes)
-                .mapToDouble(v -> v - thresholdMinutes)
-                .filter(breach -> breach > 15 && breach <= 60)
-                .count();
+        long c1 = 0;
+        long c2 = 0;
+        long c3 = 0;
 
-        long over60 = values.stream()
-                .filter(v -> v > thresholdMinutes)
-                .mapToDouble(v -> v - thresholdMinutes)
-                .filter(breach -> breach > 60)
-                .count();
+        for (double value : values) {
+            if (value <= thresholdMinutes) {
+                continue;
+            }
 
-        BreachDistributionDto dto = new BreachDistributionDto();
-        dto.setUpTo15Min((int) upTo15);
-        dto.setFrom15To60Min((int) from15To60);
-        dto.setOver60Min((int) over60);
+            double breach = value - thresholdMinutes;
 
-        return dto;
+            if (breach > 0 && breach <= b1) {
+                c1++;
+            } else if (breach <= b2) {
+                c2++;
+            } else {
+                c3++;
+            }
+        }
+
+        Map<String, Integer> result = new LinkedHashMap<>();
+        result.put("0-" + b1 + "_min", (int) c1);
+        result.put(b1 + "-" + b2 + "_min", (int) c2);
+        result.put("over_" + b2 + "_min", (int) c3);
+
+        return result;
+    }
+
+    private Map<String, Integer> buildDaysDistribution(List<Double> values, int thresholdDays) {
+        List<Integer> buckets = slaConfig.getBreachBuckets().getDays();
+        int b1 = buckets.get(0);
+        int b2 = buckets.get(1);
+
+        long c1 = 0;
+        long c2 = 0;
+        long c3 = 0;
+
+        for (double value : values) {
+            if (value <= thresholdDays) {
+                continue;
+            }
+
+            double breach = value - thresholdDays;
+
+            if (breach > 0 && breach <= b1) {
+                c1++;
+            } else if (breach <= b2) {
+                c2++;
+            } else {
+                c3++;
+            }
+        }
+
+        Map<String, Integer> result = new LinkedHashMap<>();
+        result.put("0-" + b1 + "_days", (int) c1);
+        result.put(b1 + "-" + b2 + "_days", (int) c2);
+        result.put("over_" + b2 + "_days", (int) c3);
+
+        return result;
     }
 
     private double avg(List<Double> values) {
         if (values.isEmpty()) {
             return 0.0;
         }
-        return values.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+        return values.stream()
+                .mapToDouble(Double::doubleValue)
+                .average()
+                .orElse(0.0);
     }
 
     private double percentile(List<Double> sortedValues, double percentile) {
