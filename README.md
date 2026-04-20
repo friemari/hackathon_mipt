@@ -221,53 +221,46 @@ curl -X POST http://localhost:8000/model/predict/stage1 \
 ## Структура проекта
 
 ```
-sla-service/
-├── src/main/java/com/hackathon/sla_service/
-│   ├── controller/              # REST API
-│   │   ├── SlaController.java
-│   │   ├── DeliveryController.java
-│   │   ├── FullSlaController.java
-│   │   ├── OrderTimelineController.java
-│   │   ├── SlaConfigController.java
-│   │   ├── HealthController.java
-│   │   └── DataLoadController.java
-│   ├── service/                 # Бизнес-логика
-│   │   ├── SlaSummaryService.java
-│   │   ├── DeliverySummaryService.java
-│   │   ├── SlaFullSummaryService.java
-│   │   ├── OrderTimelineService.java
-│   │   ├── SlaConfigService.java
-│   │   ├── DataLoadService.java
-│   │   ├── impl/
-│   │   └── calculator/
-│   ├── repository/              # Работа с БД
-│   │   ├── SlaRepository.java
-│   │   ├── LeadRepository.java
-│   │   ├── ImportBatchRepository.java
-│   │   ├── ImportAnomalyRepository.java
-│   │   └── model/
-│   ├── dto/                     # DTO объекты
-│   │   ├── common/
-│   │   └── response/
-│   ├── importer/                # CSV импортер
-│   │   ├── CsvImportService.java
-│   │   ├── CsvLeadRowMapper.java
-│   │   └── model/
-│   ├── config/                  # Конфигурация
-│   │   └── SlaConfigProperties.java
-│   └── exception/               # Обработка ошибок
-│       └── GlobalExceptionHandler.java
-├── ModuleML/                    # ML модуль
-│   ├── lead_scoring_model.py
-│   ├── order_processor.py
-│   ├── Dockerfile.ml
-│   └── requirements.txt
-├── src/main/resources/
-│   └── application.yml
-├── docker-compose.yml
-├── Dockerfile
-├── pom.xml
-└── README.md
+hackathon_mipt/                          # Корень Git репозитория
+│
+├── .gitignore                           # Игнорируемые файлы (.DS_Store, target, .idea)
+├── README.md                            # Полная документация
+│
+├── sla-service/                         # Java Spring Boot приложение
+│   ├── Dockerfile                       # Docker для Java приложения
+│   ├── docker-compose.yml               # Docker Compose (db, app, ml-server)
+│   ├── pom.xml                          # Maven зависимости
+│   ├── .mvn/                            # Maven wrapper
+│   │
+│   ├── src/
+│   │   ├── main/
+│   │   │   ├── java/com/hackathon/sla_service/
+│   │   │   │   ├── controller/          # REST API (7 контроллеров)
+│   │   │   │   ├── service/             # Бизнес-логика
+│   │   │   │   │   ├── impl/            # Реализации
+│   │   │   │   │   └── calculator/      # SlaMetricCalculator
+│   │   │   │   ├── repository/          # Работа с БД
+│   │   │   │   │   └── model/           # LeadTimelineRow
+│   │   │   │   ├── dto/                 # DTO объекты
+│   │   │   │   │   ├── common/          # ApiErrorResponse, SummaryMetricDto
+│   │   │   │   │   └── response/        # SlaSummaryResponse, ByManagerResponse
+│   │   │   │   ├── importer/            # CSV импортер
+│   │   │   │   │   └── model/           # CsvLeadRow
+│   │   │   │   ├── config/              # SlaConfigProperties
+│   │   │   │   └── exception/           # GlobalExceptionHandler
+│   │   │   └── resources/
+│   │   │       └── application.yml      # Конфигурация (порт, БД, SLA нормативы)
+│   │   └── test/                        # Тесты
+│   │
+│   └── target/                          # Скомпилированные файлы (игнорируется)
+│
+├── ModuleML/                            # Python ML модуль
+│   ├── Dockerfile.ml                    # Docker для FastAPI сервера
+│   ├── requirements.txt                 # Python зависимости
+│   ├── lead_scoring_model.py            # CatBoost модель (двухэтапная)
+│   └── order_processor.py               # FastAPI сервер
+│
+└── .idea/                               # Настройки IntelliJ (игнорируется)
 ```
 
 ---
