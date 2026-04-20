@@ -4,6 +4,40 @@
 
 ---
 
+## О проекте
+
+Сервис загружает выгрузку из CRM, рассчитывает SLA-метрики для двух воронок (B2C и доставка) и сквозного цикла сделки. Дополнительно включает ML-модуль для предсказания вероятности отказа клиента от выкупа.
+
+---
+
+### Основные функции
+
+| Функция | Описание |
+|---------|----------|
+| **Загрузка данных** | CSV-импорт с UPSERT и кросс-проверкой полей |
+| **B2C воронка** | SLA-1 (30 мин), SLA-2 (4 ч), SLA-3 (1 день), B2C-total (2 дня) |
+| **Воронка доставки** | SLA-4 (5 дн), SLA-5 (7 дн), DEL-total (14 дн) |
+| **Сквозной SLA** | FULL — полный цикл сделки (16 дней) |
+| **ML предсказания** | Двухэтапное предсказание выкупа, группы риска, рекомендации |
+| **Агрегаты** | % выполнения, среднее, медиана, 90-й перцентиль, распределение нарушений |
+| **Фильтрация** | По дате, менеджеру, квалификации, службе доставки |
+
+---
+
+## Технологии
+
+| Компонент | Технологии |
+|-----------|------------|
+| **Язык** | Java 23, Python 3.11 |
+| **Фреймворки** | Spring Boot 3.5, FastAPI |
+| **База данных** | PostgreSQL 15 |
+| **ML** | CatBoost, Pandas, NumPy, scikit-learn |
+| **Сборка** | Maven |
+| **Контейнеризация** | Docker / Docker Compose |
+| **Документация** | Swagger / OpenAPI |
+
+---
+
 ## Требования
 
 Перед запуском убедитесь, что у вас установлено:
@@ -80,76 +114,48 @@ curl http://localhost:8080/api/health
 
 ### SLA B2C Summary
 
-- `GET /api/sla/b2c/summary`
+- `GET /api/sla/b2c/summary` - Агрегаты B2C с фильтрацией
+- `GET /api/sla/b2c/by-manager` - Разбивка по менеджерам B2C
 
-### Описание
+```bash
+# Агрегаты за период
+curl "http://localhost:8080/api/sla/b2c/summary?date_from=2025-03-01&date_to=2025-03-31"
 
-Возвращает агрегированные метрики SLA по воронке **B2C** за указанный период.
+# По конкретному менеджеру
+curl "http://localhost:8080/api/sla/b2c/summary?date_from=2025-03-01&date_to=2025-03-31&manager_id=MGR_0001"
 
-Используется для получения общей статистики по заказам:
-
-- выполнение SLA
-- нарушения SLA
-- распределение просрочек
-- ключевые перцентильные метрики
-
-### Параметры запроса
-
-| Параметр      | Тип    | Обязательный | Описание                                       |
-| ------------- | ------ | ------------ | ---------------------------------------------- |
-| date_from     | date   | да           | Дата начала периода (включительно)             |
-| date_to       | date   | да           | Дата окончания периода (включительно)          |
-| manager_id    | string | нет          | Фильтр по B2C-менеджеру                        |
-| qualification | string | нет          | Фильтр по квалификации (по умолчанию: A, B, C) |
-
-#### Пример запроса
-
-bash
-
-```
-curl "http://localhost:8080/api/sla/b2c/summary?date_from=2024-01-01&date_to=2024-01-31"
+# По квалификации
+curl "http://localhost:8080/api/sla/b2c/summary?date_from=2025-03-01&date_to=2025-03-31&qualification=A"
 ```
 
-### Пример ответа
+### Воронка доставки
 
-### SLA B2C by Manager
+- `GET /api/sla/delivery/summary` - Агрегаты доставки
+- `GET /api/sla/delivery/by-manager` - Разбивка по менеджерам доставки
 
-- `GET /api/sla/b2c/by-manager`
-
-### Описание
-
-Возвращает агрегированные метрики SLA в разрезе менеджеров о воронке **B2C** за указанный период.
-
-### Параметры запроса
-
-| Параметр      | Тип    | Обязательный | Описание                              |
-| ------------- | ------ | ------------ | ------------------------------------- |
-| date_from     | date   | да           | Дата начала периода (включительно)    |
-| date_to       | date   | да           | Дата окончания периода (включительно) |
-| qualification | string | нет          | Фильтр по квалификации                |
-
-#### Пример запроса
-
-bash
-
-```
-curl "http://localhost:8080/api/sla/b2c/by-manager?date_from=2024-01-01&date_to=2024-01-31"
+```bash
+curl "http://localhost:8080/api/sla/delivery/summary?date_from=2025-03-01&date_to=2025-03-31"
 ```
 
-### Пример ответа
+### Сквозной SLA
 
-### Загрузка данных
+- `GET /api/sla/full/summary` - Полный цикл сделки
 
-- `POST /api/data/load`
+```bash
+curl "http://localhost:8080/api/sla/full/summary?date_from=2025-03-01&date_to=2025-03-31"
+```
 
-Загрузка CSV датасета.
+### Конфигурация
 
-#### Формат запроса
+- `GET /api/sla/config` - Tекущие нормативы SLA
 
-- `Content-Type: multipart/form-data`
-- Поле: `file` — CSV файл (string, binary)
+```bash
+curl http://localhost:8080/api/sla/config
+```
 
-#### Пример запроса
+### Загрузка данных 
+
+- `POST /api/data/load` - Загрузка CSV датасета
 
 ```bash
 curl -X POST http://localhost:8080/api/data/load \
@@ -157,199 +163,58 @@ curl -X POST http://localhost:8080/api/data/load \
   -F "file=@dataset.csv"
 ```
 
-#### Ответ (200 OK)
+### Timeline сделки
 
-```json
-{
-  "fileName": "dataset.csv",
-  "totalRows": 1000,
-  "insertedRows": 800,
-  "updatedRows": 150,
-  "skippedRows": 30,
-  "errorRows": 20,
-  "batchId": 42,
-  "status": "DONE"
-}
-```
-
-#### Поля ответа
-
-| Поле           | Тип    | Описание                             |
-| -------------- | ------ | ------------------------------------ |
-| `fileName`     | string | Имя загруженного файла               |
-| `totalRows`    | int    | Общее количество строк в файле       |
-| `insertedRows` | int    | Количество вставленных записей       |
-| `updatedRows`  | int    | Количество обновленных записей       |
-| `skippedRows`  | int    | Пропущенные строки                   |
-| `errorRows`    | int    | Строки с ошибками                    |
-| `batchId`      | long   | Идентификатор загрузки               |
-| `status`       | string | Статус обработки (`DONE` / `FAILED`) |
-
-#### Примечания
-
-- Принимается только CSV файл
-- Данные валидируются при загрузке
-- Ошибки не прерывают загрузку, а учитываются в `errorRows`
-- Поддерживается UPSERT (обновление существующих записей)
-
----
-
-## Логика расчета SLA
-
-### Нормативы (B2C воронка)
-
-| Этап | Показатель        | Формула                                  | Норматив            | Ключ в ответе               |
-| :--: | ----------------- | ---------------------------------------- | ------------------- | --------------------------- |
-|  1   | Реакция менеджера | `sale_ts - created_at`                   | 10 минут            | `sla1_reaction`             |
-|  2   | До сборки         | `to_assembly_ts - sale_ts`               | 48 часов (2880 мин) | `sla2_to_assembly`          |
-|  3   | Доставка          | `handed_to_delivery_ts - to_assembly_ts` | 3 дня (4320 мин)    | `sla3_assembly_to_delivery` |
-|  4   | B2C Total         | `handed_to_delivery_ts - created_at`     | 7 дней (10080 мин)  | `b2c_total`                 |
-
-### Что считается?
-
-- **met** = заказ выполнен в пределах норматива
-- **breach** = нарушение SLA
-- **метрики**: среднее, медиана, 90-й перцентиль
-- **распределение превышений**: до 15 мин, 15–60 мин, более 60 мин
-
-### Исключения из расчетов
-
-- `NULL` значения в нужных полях
-- Отрицательные интервалы (некорректные данные)
-- Незавершенный жизненный цикл (`lifecycle_incomplete = TRUE`)
-
----
-
-### Ответ
-
-```json
-{
-  "period": {
-    "from": "2024-01-01",
-    "to": "2024-01-31"
-  },
-  "metrics": {
-    "sla1_reaction": {
-      "threshold_minutes": 30,
-      "total_orders": 1200,
-      "met_count": 950,
-      "met_percent": 79.17,
-      "breach_count": 250,
-      "breach_percent": 20.83,
-      "avg_minutes": 18.5,
-      "median_minutes": 15,
-      "p90_minutes": 35,
-      "breach_distribution": {
-        "up_to_15min": 100,
-        "15_to_60min": 120,
-        "over_60min": 30
-      }
-    }
-  }
-}
-```
-
-### Поля ответа
-
-#### period
-
-| Поле | Тип  | Описание       |
-| ---- | ---- | -------------- |
-| from | date | Начало периода |
-| to   | date | Конец периода  |
-
-#### metrics
-
-Объект с метриками SLA (например: `sla1_reaction`, `sla2_to_assembly`)
-
-#### Внутри метрики
-
-| Поле                | Тип    | Описание                              |
-| ------------------- | ------ | ------------------------------------- |
-| threshold_minutes   | int    | Порог SLA в минутах                   |
-| total_orders        | int    | Общее количество заказов              |
-| met_count           | int    | Количество заказов, уложившихся в SLA |
-| met_percent         | float  | Процент выполнения SLA                |
-| breach_count        | int    | Количество нарушений SLA              |
-| breach_percent      | float  | Процент нарушений                     |
-| avg_minutes         | float  | Среднее время                         |
-| median_minutes      | float  | Медиана                               |
-| p90_minutes         | float  | 90-й перцентиль                       |
-| breach_distribution | object | Распределение нарушений               |
-
-#### breach_distribution
-
-| Поле        | Описание                    |
-| ----------- | --------------------------- |
-| up_to_15min | Просрочка до 15 минут       |
-| 15_to_60min | Просрочка от 15 до 60 минут |
-| over_60min  | Просрочка более 60 минут    |
-
----
-
-### Загрузка данных
-
-- `POST /api/data/load`
+- `GET /api/orders/{leadId}/timeline` - Временная линия сделки
 
 ```bash
-http://localhost:8080/api/data/load
+curl "http://localhost:8080/api/orders/LEAD_0172/timeline"
 ```
-
-### Описание
-
-Загружает CSV датасет в систему и сохраняет данные в базу.
-
-Используется для первоначальной загрузки или обновления данных.
-
-### Формат запроса
-
-- Content-Type: multipart/form-data
-- Поле:
-  - file — CSV файл (string, binary)
-
-### Пример запроса (curl)
-
-```
-curl -X POST http://localhost:8080/api/data/load \
-  -H "Content-Type: multipart/form-data" \
-  -F "file=@dataset.csv"
-```
-
-### Ответ (200 OK)
-
-```json
-{
-  "fileName": "string",
-  "totalRows": 0,
-  "insertedRows": 0,
-  "updatedRows": 0,
-  "skippedRows": 0,
-  "errorRows": 0,
-  "batchId": 0,
-  "status": "string"
-}
-```
-
-### Поля ответа
-
-| Поле         | Тип    | Описание                       |
-| ------------ | ------ | ------------------------------ |
-| fileName     | string | Имя загруженного файла         |
-| totalRows    | int    | Общее количество строк в файле |
-| insertedRows | int    | Количество вставленных записей |
-| updatedRows  | int    | Количество обновленных записей |
-| skippedRows  | int    | Пропущенные строки             |
-| errorRows    | int    | Строки с ошибками              |
-| batchId      | int    | Идентификатор загрузки         |
-| status       | string | Статус обработки               |
 
 ---
 
-### Примечания
+## ML модуль
 
-- Принимается только CSV файл
-- Данные валидируются при загрузке
-- Ошибки не прерывают загрузку, а учитываются в errorRows
+### Функции
+
+| Функция | Описание |
+|---------|----------|
+| **Stage 1** | Предсказание на момент заказа (без данных о сборке) |
+| **Stage 2** | Предсказание после сборки (с учётом скорости сборки) |
+| **Группы риска** | 🔴 Красный (>70%), 🟡 Жёлтый (30-70%), 🟢 Зелёный (<30%) |
+| **Рекомендации** | Автоматические действия для менеджеров |
+| **Экономический эффект** | Расчёт потерь от отказов |
+
+### API ML сервера
+
+| Метод | Эндпоинт | Описание |
+|-------|----------|----------|
+| `GET` | `/health` | Проверка статуса |
+| `POST` | `/model/train` | Обучение модели на CSV |
+| `GET` | `/model/status` | Статус модели |
+| `POST` | `/model/predict/stage1` | Предсказание на момент заказа |
+| `POST` | `/model/predict/stage2` | Предсказание после сборки |
+| `GET` | `/model/importance` | Важность признаков |
+
+```bash
+# Проверка статуса ML сервера
+curl http://localhost:8000/health
+
+# Статус модели
+curl http://localhost:8000/model/status
+
+# Предсказание Stage 1
+curl -X POST http://localhost:8000/model/predict/stage1 \
+  -H "Content-Type: application/json" \
+  -d '{"lead_price": 5000, "contact_Город": "Москва"}'
+```
+
+### Метрики модели
+
+| Показатель | Stage 1 | Stage 2 |
+|------------|---------|---------|
+| **ROC-AUC** | 0.714 | 0.734 |
+| **Accuracy** | 84.8% | 85.7% |
 
 ---
 
@@ -360,47 +225,54 @@ sla-service/
 ├── src/main/java/com/hackathon/sla_service/
 │   ├── controller/              # REST API
 │   │   ├── SlaController.java
+│   │   ├── DeliveryController.java
+│   │   ├── FullSlaController.java
+│   │   ├── OrderTimelineController.java
+│   │   ├── SlaConfigController.java
 │   │   ├── HealthController.java
 │   │   └── DataLoadController.java
 │   ├── service/                 # Бизнес-логика
 │   │   ├── SlaSummaryService.java
+│   │   ├── DeliverySummaryService.java
+│   │   ├── SlaFullSummaryService.java
+│   │   ├── OrderTimelineService.java
+│   │   ├── SlaConfigService.java
 │   │   ├── DataLoadService.java
 │   │   ├── impl/
-│   │   │   └── SlaSummaryServiceImpl.java
 │   │   └── calculator/
-│   │       └── SlaMetricCalculator.java
 │   ├── repository/              # Работа с БД
 │   │   ├── SlaRepository.java
 │   │   ├── LeadRepository.java
 │   │   ├── ImportBatchRepository.java
-│   │   └── ImportAnomalyRepository.java
+│   │   ├── ImportAnomalyRepository.java
+│   │   └── model/
 │   ├── dto/                     # DTO объекты
 │   │   ├── common/
-│   │   │   ├── ApiErrorResponse.java
-│   │   │   ├── SummaryMetricDto.java
-│   │   │   ├── SummaryPeriodDto.java
-│   │   │   └── BreachDistributionDto.java
 │   │   └── response/
-│   │       ├── SlaSummaryResponse.java
-│   │       ├── ByManagerResponse.java
-│   │       └── ManagerMetricsRowDto.java
 │   ├── importer/                # CSV импортер
 │   │   ├── CsvImportService.java
 │   │   ├── CsvLeadRowMapper.java
 │   │   └── model/
-│   │       └── CsvLeadRow.java
-│   └── exception/               # Глобальный обработчик ошибок
+│   ├── config/                  # Конфигурация
+│   │   └── SlaConfigProperties.java
+│   └── exception/               # Обработка ошибок
 │       └── GlobalExceptionHandler.java
+├── ModuleML/                    # ML модуль
+│   ├── lead_scoring_model.py
+│   ├── order_processor.py
+│   ├── Dockerfile.ml
+│   └── requirements.txt
 ├── src/main/resources/
-│   ├── application.properties
-│   └── schema.sql
+│   └── application.yml
+├── docker-compose.yml
+├── Dockerfile
 ├── pom.xml
 └── README.md
 ```
 
 ---
 
-## Swagger
+## Swagger UI
 
 Документация API доступна после запуска приложения:
 
@@ -408,9 +280,9 @@ sla-service/
 http://localhost:8080/docs
 ```
 
-- Посмотреть все эндпоинты
-- Протестировать запросы прямо в браузере
-- Увидеть схемы запросов и ответов
+- Просмотр всех эндпоинтов
+- Тестирование запросов прямо в браузере
+- Схемы запросов и ответов
 
 ---
 
@@ -422,12 +294,38 @@ http://localhost:8080/docs
 java -version
 ```
 
-Используйте Java 23.
-
----
+**Решение:** Используйте Java 23.
 
 ### Port 8080 already in use
 
 ```bash
-mvnw.cmd spring-boot:run -Dspring-boot.run.arguments=--server.port=8081
+./mvnw spring-boot:run -Dspring-boot.run.arguments=--server.port=8081
 ```
+
+---
+
+## Логика расчета SLA
+
+### Нормативы (B2C воронка)
+
+| Этап | Показатель | Формула | Норматив |
+|------|------------|---------|----------|
+| 1 | Реакция менеджера | `sale_ts - created_at` | 30 минут |
+| 2 | До сборки | `to_assembly_ts - sale_ts` | 4 часа |
+| 3 | Доставка | `handed_to_delivery_ts - to_assembly_ts` | 1 день |
+| 4 | B2C Total | `handed_to_delivery_ts - created_at` | 2 дня |
+
+### Нормативы (доставка)
+
+| Этап | Показатель | Формула | Норматив |
+|------|------------|---------|----------|
+| 4 | Время до ПВЗ | `issued_or_pvz_ts - handed_to_delivery_ts` | 5 дней |
+| 5 | Хранение на ПВЗ | `COALESCE(received_ts, rejected_ts, returned_ts) - issued_or_pvz_ts` | 7 дней |
+| DEL-total | Полный цикл доставки | `исход_ts - handed_to_delivery_ts` | 14 дней |
+
+### Сквозная метрика
+
+| Этап | Показатель | Формула | Норматив |
+|------|------------|---------|----------|
+| FULL | Полный цикл сделки | `closed_ts - lead_created_at` | 16 дней |
+
