@@ -4,28 +4,28 @@ services:
   db:
     image: postgres:15
     container_name: sla_postgres
-    restart: unless-stopped
     environment:
-      POSTGRES_DB: sla
-      POSTGRES_USER: sla_user
-      POSTGRES_PASSWORD: sla_pass
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./db/init:/docker-entrypoint-initdb.d
+    restart: unless-stopped
 
   app:
     build: .
     container_name: sla_app
-    depends_on:
-      - db
+    environment:
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
     ports:
       - "8080:8080"
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/sla
-      SPRING_DATASOURCE_USERNAME: sla_user
-      SPRING_DATASOURCE_PASSWORD: sla_pass
+    depends_on:
+      - db
+    restart: unless-stopped
 
 volumes:
   postgres_data:
