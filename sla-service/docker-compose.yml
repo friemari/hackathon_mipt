@@ -36,7 +36,7 @@ services:
 
   ml-server:
     build:
-      context: ./ModuleML
+      context: ../ModuleML
       dockerfile: Dockerfile.ml
     container_name: ml_server
     ports:
