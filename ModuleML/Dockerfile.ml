@@ -1,4 +1,5 @@
-FROM python:3.13-slim
+# Dockerfile.ml
+FROM python:3.11-slim
 
 WORKDIR /app
 
